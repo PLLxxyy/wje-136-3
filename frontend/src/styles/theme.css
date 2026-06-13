@@ -1,0 +1,27 @@
+:root {
+  --app: #edf1f4;
+  --sidebar: #f8faf9;
+  --topbar: #fbfcfd;
+  --panel: #ffffff;
+  --panel-muted: #f2f5f6;
+  --line: #d9e1e5;
+  --strong: #172033;
+  --body: #2f3b4d;
+  --muted: #687789;
+  --accent: #216c63;
+  --map: #dfe8e6;
+}
+
+:root[data-theme='dark'] {
+  --app: #0d141f;
+  --sidebar: #111b2a;
+  --topbar: #101827;
+  --panel: #142033;
+  --panel-muted: #19263a;
+  --line: #2a3950;
+  --strong: #f1f5f9;
+  --body: #d7dee8;
+  --muted: #93a4b8;
+  --accent: #3aa597;
+  --map: #122235;
+}
