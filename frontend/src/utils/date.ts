@@ -20,3 +20,14 @@ export function formatDate(value: string): string {
     day: '2-digit',
   }).format(new Date(value));
 }
+
+export function getCurrentMonth(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+export function isSameMonth(dateStr: string, month: string): boolean {
+  const date = new Date(dateStr);
+  const [year, monthNum] = month.split('-');
+  return date.getFullYear() === Number(year) && date.getMonth() + 1 === Number(monthNum);
+}

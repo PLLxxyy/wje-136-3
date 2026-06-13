@@ -1,4 +1,5 @@
 import {
+  CostBudget,
   CostEntry,
   FleetVehicle,
   Shipment,
@@ -22,6 +23,7 @@ export interface LogisticsSnapshot {
   warehouses: WarehouseCapacity[];
   fleet: FleetVehicle[];
   costs: CostEntry[];
+  costBudgets: CostBudget[];
   trackingEvents: TrackingEvent[];
 }
 
@@ -140,6 +142,28 @@ function buildCosts(shipments: Shipment[]): CostEntry[] {
   );
 }
 
+function buildCostBudgets(): CostBudget[] {
+  const costTypes = Object.values(CostType);
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  const defaultBudgets: Record<CostType, number> = {
+    [CostType.Fuel]: 25000,
+    [CostType.Toll]: 12000,
+    [CostType.Labor]: 18000,
+    [CostType.Maintenance]: 8000,
+    [CostType.Insurance]: 5000,
+    [CostType.Other]: 6000,
+  };
+
+  return costTypes.map((type) => ({
+    id: `BUDGET-${type}-${currentMonth}`,
+    type,
+    month: currentMonth,
+    budget: defaultBudgets[type],
+  }));
+}
+
 function buildTrackingEvents(shipments: Shipment[], warehouses: WarehouseCapacity[]): TrackingEvent[] {
   return shipments.flatMap((shipment, shipmentIndex) => {
     const warehouse = warehouses.find((item) => item.id === shipment.originWarehouseId) ?? warehouses[0];
@@ -195,6 +219,7 @@ export function createMockData(): LogisticsSnapshot {
   const shipments = buildShipments(warehouses);
   const fleet = buildFleet(shipments);
   const costs = buildCosts(shipments);
+  const costBudgets = buildCostBudgets();
   const trackingEvents = buildTrackingEvents(shipments, warehouses);
 
   return {
@@ -202,6 +227,7 @@ export function createMockData(): LogisticsSnapshot {
     warehouses,
     fleet,
     costs,
+    costBudgets,
     trackingEvents,
   };
 }

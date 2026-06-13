@@ -17,6 +17,7 @@ export function useMockData() {
   const setFleet = useFleetStore((state) => state.setFleet);
   const setFleetError = useFleetStore((state) => state.setFleetError);
   const setCosts = useCostStore((state) => state.setCosts);
+  const setBudgets = useCostStore((state) => state.setBudgets);
   const setCostError = useCostStore((state) => state.setCostError);
 
   const snapshot = useMemo(() => createMockData(), []);
@@ -31,6 +32,7 @@ export function useMockData() {
         setWarehouses(snapshot.warehouses);
         setFleet(snapshot.fleet);
         setCosts(snapshot.costs);
+        setBudgets(snapshot.costBudgets);
         await persistSnapshot(snapshot);
         if (!cancelled) {
           setShipmentError(undefined);
@@ -63,6 +65,7 @@ export function useMockData() {
   }, [
     setCostError,
     setCosts,
+    setBudgets,
     setFleet,
     setFleetError,
     setShipmentError,

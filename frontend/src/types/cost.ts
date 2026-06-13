@@ -8,3 +8,10 @@ export interface CostEntry {
   date: string;
   note: string;
 }
+
+export interface CostBudget {
+  id: string;
+  type: CostType;
+  month: string;
+  budget: number;
+}
