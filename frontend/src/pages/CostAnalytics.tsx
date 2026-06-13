@@ -1,24 +1,30 @@
 import { BadgeDollarSign, CircleAlert, PencilLine, ReceiptText, Save, TrendingDown, TrendingUp } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { EChart, CostPieChart } from '../components/charts';
 import { AlertBanner, StatCard } from '../components/common';
 import { useChartTheme } from '../hooks/useChartTheme';
 import { useCostStore } from '../stores/costStore';
 import { useShipmentStore } from '../stores/shipmentStore';
 import { CostType, COST_TYPE_LABELS } from '../types/enums';
-import { formatDate, getCurrentMonth, isSameMonth } from '../utils/date';
+import { formatDate, getCurrentMonth } from '../utils/date';
 import { saveBudget } from '../utils/db';
 
 export function CostAnalytics() {
   const costs = useCostStore((state) => state.costs);
   const budgets = useCostStore((state) => state.budgets);
   const setBudget = useCostStore((state) => state.setBudget);
+  const computeMonthly = useCostStore((state) => state.getMonthlyBudgetComparison);
   const shipments = useShipmentStore((state) => state.shipments);
   const theme = useChartTheme();
   const currentMonth = getCurrentMonth();
 
   const [editingBudgets, setEditingBudgets] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState(false);
+
+  const monthlyCostByType = useMemo(
+    () => computeMonthly(currentMonth),
+    [computeMonthly, currentMonth, costs, budgets],
+  );
 
   const totalCost = costs.reduce((sum, cost) => sum + cost.amount, 0);
   const avgCost = shipments.length ? Math.round(totalCost / shipments.length) : 0;
@@ -107,23 +113,6 @@ export function CostAnalytics() {
     }))
     .sort((a, b) => b.amount - a.amount)[0];
 
-  const monthlyCostByType = Object.values(CostType).map((type) => {
-    const spent = costs
-      .filter((cost) => cost.type === type && isSameMonth(cost.date, currentMonth))
-      .reduce((sum, cost) => sum + cost.amount, 0);
-    const budget = budgets.find((b) => b.type === type && b.month === currentMonth)?.budget ?? 0;
-    const diff = spent - budget;
-    const ratio = budget > 0 ? (spent / budget) * 100 : 0;
-    return {
-      type,
-      spent,
-      budget,
-      diff,
-      ratio,
-      isOver: spent > budget,
-    };
-  });
-
   const totalBudget = monthlyCostByType.reduce((sum, item) => sum + item.budget, 0);
   const totalSpent = monthlyCostByType.reduce((sum, item) => sum + item.spent, 0);
   const overBudgetTypes = monthlyCostByType.filter((item) => item.isOver);
@@ -133,17 +122,24 @@ export function CostAnalytics() {
   }
 
   function handleBudgetSave(type: CostType) {
-    const value = Number(editingBudgets[type] ?? 0);
-    if (value >= 0) {
-      setBudget(type, currentMonth, value);
-      const budget = {
-        id: `BUDGET-${type}-${currentMonth}`,
-        type,
-        month: currentMonth,
-        budget: value,
-      };
-      saveBudget(budget).catch(() => {});
+    const raw = editingBudgets[type];
+    if (raw === undefined) return;
+    const value = Number(raw);
+    if (!Number.isFinite(value) || value < 0) {
+      setEditingBudgets((prev) => {
+        const next = { ...prev };
+        delete next[type];
+        return next;
+      });
+      return;
     }
+    setBudget(type, currentMonth, value);
+    saveBudget({
+      id: `BUDGET-${type}-${currentMonth}`,
+      type,
+      month: currentMonth,
+      budget: value,
+    }).catch(() => {});
     setEditingBudgets((prev) => {
       const next = { ...prev };
       delete next[type];

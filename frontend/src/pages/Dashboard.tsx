@@ -1,4 +1,5 @@
 import { AlertTriangle, DollarSign, PackageCheck, Truck, Warehouse } from 'lucide-react';
+import { useMemo } from 'react';
 import { EChart, ShipmentTrendChart } from '../components/charts';
 import { AlertBanner, StatCard, StatusRing } from '../components/common';
 import { statusColors } from '../constants/chartColors';
@@ -7,8 +8,8 @@ import { useCostStore } from '../stores/costStore';
 import { useFleetStore } from '../stores/fleetStore';
 import { useShipmentStore } from '../stores/shipmentStore';
 import { useWarehouseStore } from '../stores/warehouseStore';
-import { COST_TYPE_LABELS, CostType, SHIPMENT_STATUS_LABELS, ShipmentStatus, VEHICLE_STATUS_LABELS, VehicleStatus } from '../types/enums';
-import { getCurrentMonth, isSameMonth } from '../utils/date';
+import { COST_TYPE_LABELS, SHIPMENT_STATUS_LABELS, ShipmentStatus, VEHICLE_STATUS_LABELS, VehicleStatus } from '../types/enums';
+import { getCurrentMonth } from '../utils/date';
 
 export function Dashboard() {
   const shipments = useShipmentStore((state) => state.shipments);
@@ -17,6 +18,7 @@ export function Dashboard() {
   const fleet = useFleetStore((state) => state.fleet);
   const costs = useCostStore((state) => state.costs);
   const budgets = useCostStore((state) => state.budgets);
+  const computeMonthly = useCostStore((state) => state.getMonthlyBudgetComparison);
   const theme = useChartTheme();
   const currentMonth = getCurrentMonth();
 
@@ -28,21 +30,9 @@ export function Dashboard() {
   const highCapacity = warehouses.filter((warehouse) => warehouse.usedCapacityM3 / warehouse.totalCapacityM3 > 0.85).length;
   const fleetOnRoute = fleet.filter((vehicle) => vehicle.status === VehicleStatus.OnRoute).length;
 
-  const overBudgetTypes = Object.values(CostType)
-    .map((type) => {
-      const spent = costs
-        .filter((cost) => cost.type === type && isSameMonth(cost.date, currentMonth))
-        .reduce((sum, cost) => sum + cost.amount, 0);
-      const budget = budgets.find((b) => b.type === type && b.month === currentMonth)?.budget ?? 0;
-      return {
-        type,
-        spent,
-        budget,
-        diff: spent - budget,
-        isOver: spent > budget && budget > 0,
-      };
-    })
-    .filter((item) => item.isOver);
+  const overBudgetTypes = useMemo(() => {
+    return computeMonthly(currentMonth).filter((item) => item.isOver);
+  }, [computeMonthly, currentMonth, costs, budgets]);
 
   const totalOverBudget = overBudgetTypes.reduce((sum, item) => sum + item.diff, 0);
 

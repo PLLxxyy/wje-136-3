@@ -29,17 +29,15 @@ export async function persistSnapshot(snapshot: {
   warehouses: WarehouseCapacity[];
   fleet: FleetVehicle[];
   costs: CostEntry[];
-  costBudgets: CostBudget[];
   trackingEvents: TrackingEvent[];
 }): Promise<void> {
   try {
-    await db.transaction('rw', [db.shipments, db.warehouses, db.fleet, db.costs, db.costBudgets, db.trackingEvents], async () => {
+    await db.transaction('rw', [db.shipments, db.warehouses, db.fleet, db.costs, db.trackingEvents], async () => {
       await Promise.all([
         db.shipments.clear(),
         db.warehouses.clear(),
         db.fleet.clear(),
         db.costs.clear(),
-        db.costBudgets.clear(),
         db.trackingEvents.clear(),
       ]);
 
@@ -48,7 +46,6 @@ export async function persistSnapshot(snapshot: {
         db.warehouses.bulkPut(snapshot.warehouses),
         db.fleet.bulkPut(snapshot.fleet),
         db.costs.bulkPut(snapshot.costs),
-        db.costBudgets.bulkPut(snapshot.costBudgets),
         db.trackingEvents.bulkPut(snapshot.trackingEvents),
       ]);
     });
@@ -56,6 +53,23 @@ export async function persistSnapshot(snapshot: {
     throw {
       code: 'INDEXEDDB_FAILED',
       message: 'IndexedDB 数据写入失败，已回退到内存数据。',
+      cause,
+    };
+  }
+}
+
+export async function initBudgetsIfEmpty(defaultBudgets: CostBudget[]): Promise<CostBudget[]> {
+  try {
+    const existing = await db.costBudgets.toArray();
+    if (existing.length === 0) {
+      await db.costBudgets.bulkPut(defaultBudgets);
+      return defaultBudgets;
+    }
+    return existing;
+  } catch (cause) {
+    throw {
+      code: 'INDEXEDDB_FAILED',
+      message: '预算数据初始化失败。',
       cause,
     };
   }

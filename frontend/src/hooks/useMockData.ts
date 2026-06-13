@@ -5,7 +5,7 @@ import { useFleetStore } from '../stores/fleetStore';
 import { useShipmentStore } from '../stores/shipmentStore';
 import { useWarehouseStore } from '../stores/warehouseStore';
 import { AppError } from '../types';
-import { persistSnapshot } from '../utils/db';
+import { initBudgetsIfEmpty, persistSnapshot } from '../utils/db';
 
 export function useMockData() {
   const [loading, setLoading] = useState(true);
@@ -32,8 +32,9 @@ export function useMockData() {
         setWarehouses(snapshot.warehouses);
         setFleet(snapshot.fleet);
         setCosts(snapshot.costs);
-        setBudgets(snapshot.costBudgets);
         await persistSnapshot(snapshot);
+        const budgets = await initBudgetsIfEmpty(snapshot.costBudgets);
+        setBudgets(budgets);
         if (!cancelled) {
           setShipmentError(undefined);
           setWarehouseError(undefined);
@@ -41,6 +42,7 @@ export function useMockData() {
           setCostError(undefined);
         }
       } catch (cause) {
+        setBudgets(snapshot.costBudgets);
         const error: AppError = {
           code: 'INDEXEDDB_FAILED',
           message: '浏览器本地数据库不可用，当前使用内存中的模拟数据。',
